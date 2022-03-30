@@ -1,0 +1,104 @@
+{
+  "iff": {
+//    "logfile": "iff.log",
+    "log_level": "WARNING",
+
+//    "service_threads": 0,
+    "optimistic_alloc": false,
+    "fallback_to_dynamic": true,
+
+    "devices": [
+      {
+        "id": "cpu_dev",
+        "type": "cpu"
+      },
+      {
+        "id": "cuda_dev",
+        "type": "cuda",
+        "device_number": 0
+      }
+    ]
+  },
+
+  "chains": [
+    {
+      "id": "test_chain",
+
+      "elements": [
+        {
+          "id": "mq042",
+          "type": "xicamera",
+          "debug_level": "WARNING",
+          "auto_bandwidth_calculation": false,
+          "cpu_device_id": "cpu_dev",
+          "serial_number": "36382351",
+          "buffer_mode": "safe",
+          "custom_params": [
+            { "buffers_queue_size": 4 },
+            { "acq_buffer_size": 4194304 },
+            { "acq_buffer_size_unit": 20 },
+            { "bpc": 1 },
+            { "limit_bandwidth": 3000 },
+            { "limit_bandwidth_mode": 1 }
+          ],
+          "exposure": 10,
+          "fps": 30.0,
+          "gain": 6.0,
+          "image_format": "RAW8"
+        },
+        {
+          "id": "gpuproc",
+          "type": "cuda_processor",
+          "max_processing_count": 2,
+          "cpu_device_id": "cpu_dev",
+          "gpu_device_id": "cuda_dev",
+          "elements": [
+            {"id": "import_from_host", "type": "import_from_host"},
+            {"id": "black_level", "type": "black_level"},
+            {"id": "white_balance", "type": "white_balance"},
+            {"id": "demosaic", "type": "demosaic", "algorithm": "HQLI"},
+            {"id": "color_correction", "type": "color_correction", "matrix": [0.0, 0.0, 1.0,
+                                                                              0.0, 1.0, 0.0,
+                                                                              1.0, 0.0, 0.0]},
+            {"id": "gamma", "type": "gamma8", "linear": 0.018, "power": 0.45},
+            {"id": "export_to_hostmem", "type": "export_to_hostmem", "output_format": "RGBA8", "output_name": "rgba"},
+            {"id": "hist", "type": "histogram", "output_format": "Histogram4Bayer256Int", "output_name": "histogram"}
+          ],
+          "connections": [
+            { "src": "import_from_host", "dst": "black_level" },
+            { "src": "black_level", "dst": "white_balance" },
+            { "src": "white_balance", "dst": "demosaic" },
+            { "src": "demosaic", "dst": "color_correction" },
+            { "src": "color_correction", "dst": "gamma" },
+            { "src": "gamma", "dst": "export_to_hostmem" },
+            { "src": "black_level", "dst": "hist" }
+          ]
+        },
+        {
+          "id": "autowb",
+          "type": "awb_aec",
+          "cpu_device_id": "cpu_dev",
+          "autostart": true,
+          "aec_enabled": false,
+          "awb_enabled": true,
+          "max_exposure": 30000
+        },
+        {
+          "id": "exporter",
+          "type": "frame_exporter",
+          "device_id": "cpu_dev",
+          "max_processing_count": 6
+        }
+      ],
+      "connections": [
+        { "src": "mq042", "dst": "gpuproc" },
+        { "src": "gpuproc->histogram","dst": "autowb", "type": "weak" },
+        { "src": "gpuproc->rgba", "dst": "exporter" }
+      ],
+      "parametercontrol": [
+        { "origin": "autowb/wb_callback", "target": "mq042" },
+        { "origin": "autowb/exposure_callback", "target": "mq042" }
+      ]
+    }
+  ]
+}
