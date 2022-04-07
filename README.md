@@ -1,6 +1,6 @@
 # `imagebroker`
 
-`imagebroker` application demonstrates how to export images to the client code across IFF SDK library boundaries.
+`imagebroker` application demonstrates how to export images to the user code across IFF SDK library boundaries.
 Application is located in `samples/02_export` directory of IFF SDK package.
 It comes with example configuration file (`imagebroker.json`) providing the following functionality:
 
@@ -16,4 +16,4 @@ It comes with example configuration file (`imagebroker.json`) providing the foll
 * automatic control of white balance
 * export image to the client code
 
-Additionally as an example of client code images are rendered on the screen using [OpenCV](https://opencv.org/) library, which should be installed in the system.
+Additionally example code renders images on the screen using [OpenCV](https://opencv.org/) library, which should be installed in the system.
