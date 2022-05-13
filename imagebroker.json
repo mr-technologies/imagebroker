@@ -1,5 +1,5 @@
 {
-  "iff": {
+  "IFF": {
 //    "logfile": "iff.log",
     "log_level": "WARNING",
 
@@ -41,7 +41,7 @@
             { "limit_bandwidth": 3000 },
             { "limit_bandwidth_mode": 1 }
           ],
-          "exposure": 10,
+          "exposure": 10000,
           "fps": 30.0,
           "gain": 6.0,
           "image_format": "RAW8"

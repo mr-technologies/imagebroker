@@ -42,7 +42,13 @@ int main()
         return 1;
     }
 
-    iff_initialize(config_str.c_str());
+    auto it_iff = config.find("IFF");
+    if(it_iff == config.end())
+    {
+        printf("Unable to find IFF configuration section in config file\n");
+        return 1;
+    }
+    iff_initialize(it_iff.value().dump().c_str());
 
     std::vector<iff_chain_handle_t> chains;
     for(json& chain_config : it_chains.value())

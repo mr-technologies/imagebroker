@@ -63,18 +63,18 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 if(MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE
-            ${SDK_LIBRARY_DIR}/iff_sdk.lib
+            ${SDK_LIBRARY_DIR}/iffsdk.lib
             )
 elseif(APPLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE
             ${CMAKE_DL_LIBS}
-            ${SDK_LIBRARY_DIR}/libiff_sdk.dylib
+            ${SDK_LIBRARY_DIR}/libiffsdk.dylib
             )
 elseif(UNIX)
     target_link_libraries(${PROJECT_NAME} PRIVATE
             rt
             ${CMAKE_DL_LIBS}
-            ${SDK_LIBRARY_DIR}/libiff_sdk.so
+            ${SDK_LIBRARY_DIR}/libiffsdk.so
             )
 endif()
 
@@ -85,7 +85,7 @@ if(MSVC)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             DEPENDS ${CMAKE_BINARY_DIR}/bin/${PROJECT_NAME}.json
             COMMAND ${CMAKE_COMMAND} -E copy
-            iff_sdk.dll
+            iffsdk.dll
             cuda_device.dll
             cpu_device.dll
             nvidia_encoder.dll
