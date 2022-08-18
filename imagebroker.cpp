@@ -110,7 +110,7 @@ int main()
     printf("To terminate program press `Esc` key\n");
     while(true)
     {
-        if(cv::pollKey() == 27)
+        if((cv::pollKey() & 0xffff) == 27)
         {
             printf("Esc key is pressed by user. Stopping application.\n");
             break;
