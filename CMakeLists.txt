@@ -46,7 +46,7 @@ if(MSVC)
     set(OpenCV_DIR $ENV{OPENCV_DIR})
 endif()
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 4.5.2 REQUIRED)
 message(STATUS "Found OpenCV ${OpenCV_VERSION}")
 
 set(SDK_LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/lib)
