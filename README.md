@@ -16,4 +16,4 @@ It comes with example configuration file (`imagebroker.json`) providing the foll
 * automatic control of white balance
 * export image to the client code
 
-Additionally example code renders images on the screen using [OpenCV](https://opencv.org/) library, which should be installed in the system (minimal required version is 4.5.2.
+Additionally example code renders images on the screen using [OpenCV](https://opencv.org/) library, which should be installed in the system (minimal required version is 4.5.2).
