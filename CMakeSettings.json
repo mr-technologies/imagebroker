@@ -4,7 +4,6 @@
             "name": "Release",
             "generator": "Ninja",
             "configurationType": "RelWithDebInfo",
-            "environments": [ { "VCToolsVersion": "14.27" } ],
             "inheritEnvironments": [ "msvc_x64_x64" ],
             "cmakeCommandArgs": "",
             "buildRoot": "${projectDir}\\build"
