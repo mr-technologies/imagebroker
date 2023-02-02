@@ -1,0 +1,22 @@
+/*build*/
+
+# cscope
+cscope.out
+
+# macOS
+.DS_Store
+
+## JetBrains
+/.idea/
+
+# vim
+.*.swp
+.swp
+
+# Visual Studio
+/.vs/**
+!/.vs/launch.vs.json
+
+# YCM
+/compile_commands.json
+/.clangd/
