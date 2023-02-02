@@ -1,7 +1,5 @@
 {
   "IFF": {
-    "log_level": "WARNING",
-
     "devices": [
       {
         "id": "cpu_dev",
@@ -9,43 +7,31 @@
       },
       {
         "id": "cuda_dev",
-        "type": "cuda",
-        "device_number": 0
+        "type": "cuda"
       }
     ]
   },
 
   "chains": [
     {
-      "id": "test_chain",
+      "id": "main",
 
       "elements": [
         {
           "id": "cam",
           "type": "xicamera",
-          "debug_level": "WARNING",
-          "auto_bandwidth_calculation": false,
           "cpu_device_id": "cpu_dev",
-          "serial_number": "CECAU2218000",
-          "buffer_mode": "safe",
+          "serial_number": "<CHANGEME>",
+          "image_format": "RAW16",
           "custom_params": [
-            { "acq_buffer_size_unit": 8 },
-            { "acq_buffer_size": 4816896 },
-            { "buffers_queue_size": 6 },
-            { "bpc": 1 },
-            { "limit_bandwidth": 3000 }, //for USB3
-            { "limit_bandwidth_mode": 1 }
+            { "bpc":                            1 },
+            { "column_fpn_correction":          1 },
+            { "row_fpn_correction":             1 },
+            { "column_black_offset_correction": 1 },
+            { "row_black_offset_correction":    1 }
           ],
-          "roi_region": { //full frame is 2064x1544
-            "offset_x": 0,
-            "width": 2064,
-            "offset_y": 0,
-            "height": 1544
-          },
           "exposure": 10000,
-          "fps": 60.0,
-          "gain": 0.0,
-          "image_format": "RAW16"
+          "gain": 0.0
         },
         {
           "id": "gpuproc",
@@ -53,25 +39,26 @@
           "cpu_device_id": "cpu_dev",
           "gpu_device_id": "cuda_dev",
           "elements": [
-            {"id": "import_from_host", "type": "import_from_host"},
-            {"id": "black_level", "type": "black_level"},
-            {"id": "white_balance", "type": "white_balance"},
-            {"id": "demosaic", "type": "demosaic", "algorithm": "DFPD"},
-            {"id": "color_correction", "type": "color_correction", "matrix": [ 0.035829098,   -0.74462153152,  1.70864363808,
-                                                                              -0.41334634771,  1.62555457277, -0.21229019778,
-                                                                               1.81950180897, -0.6574637114,  -0.1617334668]},
-            {"id": "gamma", "type": "gamma8", "function": "hlg", "linear": 0.018, "power": 0.45}, //linear and power for function "gamma"
-            {"id": "export_to_device", "type": "export_to_device", "output_format": "RGBA8", "output_name": "rgba"},
-            {"id": "hist", "type": "histogram", "output_format": "Histogram4Bayer256Int", "output_name": "histogram"}
+            { "id": "import_from_host", "type": "import_from_host" },
+            { "id": "black_level",      "type": "black_level" },
+            { "id": "white_balance",    "type": "white_balance" },
+            { "id": "demosaic",         "type": "demosaic",         "algorithm": "L7" },
+            { "id": "color_correction", "type": "color_correction", "matrix": [ 0.0, 0.0, 1.0,
+                                                                                0.0, 1.0, 0.0,
+                                                                                1.0, 0.0, 0.0 ] },
+            { "id": "gamma",            "type": "gamma8",           "function": "hlg" },
+            { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_hostmem", if OpenCV is built without CUDA or OpenGL support
+                                                                    "output_format": "RGBA8",                 "output_name": "rgba" },
+            { "id": "hist",             "type": "histogram",        "output_format": "Histogram4Bayer256Int", "output_name": "histogram" }
           ],
           "connections": [
             { "src": "import_from_host", "dst": "black_level" },
-            { "src": "black_level", "dst": "white_balance" },
-            { "src": "white_balance", "dst": "demosaic" },
-            { "src": "demosaic", "dst": "color_correction" },
+            { "src": "black_level",      "dst": "white_balance" },
+            { "src": "white_balance",    "dst": "demosaic" },
+            { "src": "demosaic",         "dst": "color_correction" },
             { "src": "color_correction", "dst": "gamma" },
-            { "src": "gamma", "dst": "export_to_device" },
-            { "src": "black_level", "dst": "hist" }
+            { "src": "gamma",            "dst": "export" },
+            { "src": "black_level",      "dst": "hist" }
           ]
         },
         {
@@ -82,21 +69,21 @@
           "aec_enabled": true,
           "awb_enabled": true,
           "max_exposure": 15000,
-          "ev_correction": -1.585 //for HLG
+          "ev_correction": -1.585 //for Hybrid Log-Gamma (HLG) function
         },
         {
           "id": "exporter",
           "type": "frame_exporter",
-          "device_id": "cuda_dev"
+          "device_id": "cuda_dev" //change "cuda_dev" to "cpu_dev", if OpenCV is built without CUDA or OpenGL support
         }
       ],
       "connections": [
-        { "src": "cam", "dst": "gpuproc" },
-        { "src": "gpuproc->histogram","dst": "autoctrl", "type": "weak" },
-        { "src": "gpuproc->rgba", "dst": "exporter" }
+        { "src": "cam",                           "dst": "gpuproc" },
+        { "src": "gpuproc->histogram",            "dst": "autoctrl", "type": "weak" },
+        { "src": "gpuproc->rgba",                 "dst": "exporter" }
       ],
       "parametercontrol": [
-        { "origin": "autoctrl/wb_callback", "target": "cam" },
+        { "origin": "autoctrl/wb_callback",       "target": "cam" },
         { "origin": "autoctrl/exposure_callback", "target": "cam" }
       ]
     }
