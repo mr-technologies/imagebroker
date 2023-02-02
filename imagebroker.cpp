@@ -1,32 +1,33 @@
-#define OPENCV_HAS_CUDA_AND_OPENGL 1
-
 // std
-#include <map>
-#include <stack>
-#include <chrono>
-#include <thread>
-#include <vector>
-#include <cassert>
 #include <fstream>
-#include <condition_variable>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <mutex>
+#include <sstream>
+#include <stdlib.h>
+#include <string>
+#include <vector>
 
 // json
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 // OpenCV
 #include <opencv2/opencv.hpp>
-#if OPENCV_HAS_CUDA_AND_OPENGL
+#include <opencv2/cvconfig.h>
+#if defined(HAVE_CUDA) && defined(HAVE_OPENGL)
 #include <opencv2/core/opengl.hpp>
+#define OPENCV_HAS_CUDA_AND_OPENGL 1
+#else
+#warning Missing CUDA or OpenGL support in OpenCV, make sure to adjust configuration file accordingly
 #endif
-#include <opencv2/highgui.hpp>
 
 // IFF SDK
-#include "iff.h"
+#include <iff.h>
 
 
-const int MAX_WINDOW_WIDTH  = 1280;
-const int MAX_WINDOW_HEIGHT = 1024;
+constexpr int MAX_WINDOW_WIDTH  = 1280;
+constexpr int MAX_WINDOW_HEIGHT = 1024;
 
 struct exporter_t
 {
@@ -36,40 +37,42 @@ struct exporter_t
 int main()
 {
     std::ifstream cfg_file("imagebroker.json");
-    std::string config_str = { std::istreambuf_iterator<char>(cfg_file), std::istreambuf_iterator<char>() };
+    const std::string config_str = { std::istreambuf_iterator<char>(cfg_file), std::istreambuf_iterator<char>() };
 
-    auto config = json::parse(config_str, nullptr, true, true);
-    auto it_chains = config.find("chains");
+    const auto config = nlohmann::json::parse(config_str, nullptr, true, true);
+    const auto it_chains = config.find("chains");
     if(it_chains == config.end())
     {
-        printf("Invalid configuration provided: chains not found\n");
-        return 1;
+        std::cerr << "Invalid configuration provided: missing `chains` section\n";
+        return EXIT_FAILURE;
     }
     if(!it_chains->is_array())
     {
-        printf("Invalid configuration provided: section 'chains' must be an array\n");
-        return 1;
+        std::cerr << "Invalid configuration provided: section `chains` must be an array\n";
+        return EXIT_FAILURE;
     }
-
-    auto it_iff = config.find("IFF");
+    const auto it_iff = config.find("IFF");
     if(it_iff == config.end())
     {
-        printf("Unable to find IFF configuration section in config file\n");
-        return 1;
+        std::cerr << "Invalid configuration provided: missing `IFF` section\n";
+        return EXIT_FAILURE;
     }
+
     iff_initialize(it_iff.value().dump().c_str());
 
-    std::vector<iff_chain_handle_t> chains;
-    for(json& chain_config : it_chains.value())
+    std::vector<iff_chain_handle_t> chain_handles;
+    for(const auto& chain_config : it_chains.value())
     {
-        auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
-        {
-            printf("Chain element %s reported an error: %d\n", element_name, error_code);
-        });
-        chains.push_back(chain_handle);
+        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
+                {
+                    std::ostringstream message;
+                    message << "Chain element `" << element_name << "` reported an error: " << error_code;
+                    iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
+                });
+        chain_handles.push_back(chain_handle);
     }
 
-    auto current_chain = chains[0];
+    const auto& current_chain = chain_handles.front();
 
 #if OPENCV_HAS_CUDA_AND_OPENGL
     using Mat = cv::cuda::GpuMat;
@@ -82,9 +85,9 @@ int main()
     exporter_t export_func;
     export_func.invoke = [&](const void* data, size_t size, iff_image_metadata* metadata)
     {
-        void* img_data = const_cast<void*>(data);
+        void* const img_data = const_cast<void*>(data);
         Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, img_data, metadata->width * 4 + metadata->padding);
-        std::scoped_lock<std::mutex> render_lock(render_mutex);
+        std::lock_guard<std::mutex> render_lock(render_mutex);
         src_image.copyTo(render_image);
     };
     iff_set_export_callback(current_chain, "exporter",
@@ -95,9 +98,9 @@ int main()
                             },
                             &export_func);
 
-    iff_execute(current_chain, json{ {"exporter", {{"command", "on"}}} }.dump().c_str());
+    iff_execute(current_chain, nlohmann::json{ { "exporter", { { "command", "on" } } } }.dump().c_str());
 
-    std::string window_name = "IFF SDK Image Broker Sample";
+    const std::string window_name = "IFF SDK Image Broker Sample";
     bool size_set = false;
 #if OPENCV_HAS_CUDA_AND_OPENGL
     cv::namedWindow(window_name, cv::WINDOW_NORMAL | cv::WINDOW_OPENGL);
@@ -107,15 +110,15 @@ int main()
     cv::namedWindow(window_name, cv::WINDOW_NORMAL);
 #endif
 
-    printf("To terminate program press `Esc` key\n");
+    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
     while(true)
     {
         if((cv::pollKey() & 0xffff) == 27)
         {
-            printf("Esc key is pressed by user. Stopping application.\n");
+            iff_log(IFF_LOG_LEVEL_INFO, "Esc key was pressed, stopping the program");
             break;
         }
-        std::scoped_lock<std::mutex> render_lock(render_mutex);
+        std::lock_guard<std::mutex> render_lock(render_mutex);
         if(!render_image.empty())
         {
             if(!size_set)
@@ -143,8 +146,12 @@ int main()
         }
     }
 
-    iff_release_chain(current_chain);
+    for(const auto chain_handle : chain_handles)
+    {
+        iff_release_chain(chain_handle);
+    }
+
     iff_finalize();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
