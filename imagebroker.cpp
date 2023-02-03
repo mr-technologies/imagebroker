@@ -51,6 +51,11 @@ int main()
         std::cerr << "Invalid configuration provided: section `chains` must be an array\n";
         return EXIT_FAILURE;
     }
+    if(it_chains->empty())
+    {
+        std::cerr << "Invalid configuration provided: section `chains` must not be empty\n";
+        return EXIT_FAILURE;
+    }
     const auto it_iff = config.find("IFF");
     if(it_iff == config.end())
     {
