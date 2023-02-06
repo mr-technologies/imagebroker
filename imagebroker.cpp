@@ -19,7 +19,7 @@
 #include <opencv2/core/opengl.hpp>
 #define OPENCV_HAS_CUDA_AND_OPENGL 1
 #else
-#warning Missing CUDA or OpenGL support in OpenCV, make sure to adjust configuration file accordingly
+#pragma message("Missing CUDA or OpenGL support in OpenCV, make sure to adjust configuration file accordingly")
 #endif
 
 // IFF SDK
