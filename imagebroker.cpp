@@ -131,12 +131,12 @@ int main()
                 auto size = render_image.size();
                 if(size.width > MAX_WINDOW_WIDTH)
                 {
-                    size.height = MAX_WINDOW_WIDTH / size.aspectRatio();
+                    size.height = static_cast<decltype(size)::value_type>(MAX_WINDOW_WIDTH / size.aspectRatio());
                     size.width = MAX_WINDOW_WIDTH;
                 }
                 if(size.height > MAX_WINDOW_HEIGHT)
                 {
-                    size.width = MAX_WINDOW_HEIGHT * size.aspectRatio();
+                    size.width = static_cast<decltype(size)::value_type>(MAX_WINDOW_HEIGHT * size.aspectRatio());
                     size.height = MAX_WINDOW_HEIGHT;
                 }
                 cv::resizeWindow(window_name, size);
