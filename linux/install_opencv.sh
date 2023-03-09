@@ -12,7 +12,15 @@ fi
 OPENCV_VERSION="4.6.0"
 if [ $JETSON ]
 then
-	CUDA_VERSION="10-2"
+	kern_ver="$(uname -r)"
+	if [ "${kern_ver%%.*}" -ge 5 ]
+	then
+		CUDA_VERSION="11-4"
+		JETSON_NEW=1
+	else
+		CUDA_VERSION="10-2"
+		JETSON_OLD=1
+	fi
 else
 	CUDA_VERSION="11-7"
 fi
@@ -32,9 +40,12 @@ sudo apt install -y \
 	libwebp-dev \
 	pkg-config \
 	unzip
-if [ $JETSON ]
+if [ $JETSON_OLD ]
 then
 	sudo mkdir -p /usr/lib/aarch64-linux-gnu/gtkglext-1.0/include
+fi
+if [ $JETSON ]
+then
 	sudo apt install -y cuda-toolkit-${CUDA_VERSION}
 else
 	sudo apt install -y cuda-minimal-build-${CUDA_VERSION} cuda-libraries-dev-${CUDA_VERSION}
@@ -65,8 +76,10 @@ CONFIG="-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-${OPENCV_VERSION}/modules 
 	-DWITH_OPENGL=ON \
 	-DWITH_CUDA=ON \
 	-DCUDA_FAST_MATH=ON"
-if [ $JETSON ]
+if [ $JETSON_NEW ]
 then
+	CONFIG+=" -DCUDA_ARCH_BIN=7.2,8.7     -DCUDA_ARCH_PTX=8.7"
+elif [ $JETSON_OLD ]
 	CONFIG+=" -DCUDA_ARCH_BIN=5.3,6.2,7.2 -DCUDA_ARCH_PTX=7.2"
 fi
 cmake $CONFIG ../opencv-${OPENCV_VERSION}
