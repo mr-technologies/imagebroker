@@ -14,7 +14,7 @@ if [ $JETSON ]
 then
 	CUDA_VERSION="10-2"
 else
-	CUDA_VERSION="11-4"
+	CUDA_VERSION="11-7"
 fi
 
 echo "Installing dependencies..."
