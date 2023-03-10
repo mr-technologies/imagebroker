@@ -80,6 +80,7 @@ if [ $JETSON_NEW ]
 then
 	CONFIG+=" -DCUDA_ARCH_BIN=7.2,8.7     -DCUDA_ARCH_PTX=8.7"
 elif [ $JETSON_OLD ]
+then
 	CONFIG+=" -DCUDA_ARCH_BIN=5.3,6.2,7.2 -DCUDA_ARCH_PTX=7.2"
 fi
 cmake $CONFIG ../opencv-${OPENCV_VERSION}
