@@ -68,12 +68,14 @@ int main()
     std::vector<iff_chain_handle_t> chain_handles;
     for(const auto& chain_config : it_chains.value())
     {
-        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
-                {
-                    std::ostringstream message;
-                    message << "Chain element `" << element_name << "` reported an error: " << error_code;
-                    iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
-                });
+        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(),
+                                                   [](const char* element_name, int error_code, void* private_data)
+                                                   {
+                                                        std::ostringstream message;
+                                                        message << "Chain element `" << element_name << "` reported an error: " << error_code;
+                                                        iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
+                                                   },
+                                                   nullptr);
         chain_handles.push_back(chain_handle);
     }
 
