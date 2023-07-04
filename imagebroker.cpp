@@ -73,7 +73,7 @@ int main()
                                                    {
                                                         std::ostringstream message;
                                                         message << "Chain element `" << element_name << "` reported an error: " << error_code;
-                                                        iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
+                                                        iff_log(IFF_LOG_LEVEL_ERROR, "imagebroker", message.str().c_str());
                                                    },
                                                    nullptr);
         chain_handles.push_back(chain_handle);
@@ -117,12 +117,12 @@ int main()
     cv::namedWindow(window_name, cv::WINDOW_NORMAL);
 #endif
 
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
+    iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Press Esc to terminate the program");
     while(true)
     {
         if((cv::pollKey() & 0xffff) == 27)
         {
-            iff_log(IFF_LOG_LEVEL_INFO, "Esc key was pressed, stopping the program");
+            iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Esc key was pressed, stopping the program");
             break;
         }
         std::lock_guard<std::mutex> render_lock(render_mutex);
