@@ -47,7 +47,7 @@ if(NOT TARGET IFF::iffsdk)
     set_property(TARGET IFF::iffsdk PROPERTY INTERFACE_INCLUDE_DIRECTORIES
             ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/include
             )
-    if(MSVC)
+    if(WIN32)
         set_property(TARGET IFF::iffsdk PROPERTY INTERFACE_LINK_LIBRARIES
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk/lib/iffsdk${CMAKE_LINK_LIBRARY_SUFFIX}
                 )
