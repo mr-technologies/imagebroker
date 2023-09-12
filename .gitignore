@@ -6,7 +6,7 @@ cscope.out
 # macOS
 .DS_Store
 
-## JetBrains
+# JetBrains
 /.idea/
 
 # vim
