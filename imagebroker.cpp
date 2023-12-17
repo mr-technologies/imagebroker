@@ -91,7 +91,15 @@ int main()
     export_func.invoke = [&](const void* data, size_t size, iff_image_metadata* metadata)
     {
         void* const img_data = const_cast<void*>(data);
-        Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, img_data, metadata->width * 4 + metadata->padding);
+        const auto pitch = metadata->width * 4u + metadata->padding;
+        if(size < pitch * metadata->height)
+        {
+            std::ostringstream message;
+            message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
+            iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
+            return;
+        }
+        Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, img_data, pitch);
         std::lock_guard<std::mutex> render_lock(render_mutex);
         src_image.copyTo(render_image);
     };
