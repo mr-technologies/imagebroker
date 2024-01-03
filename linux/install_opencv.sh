@@ -9,13 +9,21 @@ then
 fi
 
 # Adjust as needed
-OPENCV_VERSION="4.6.0"
+OPENCV_VERSION="4.8.0"
 if [ $JETSON ]
 then
 	kern_ver="$(uname -r)"
-	if [ "${kern_ver%%.*}" -ge 5 ]
+	kern_major="${kern_ver%%.*}"
+	kern_minor="${kern_ver#*.}"
+	kern_minor="${kern_minor%%.*}"
+	if [ "$kern_major" -ge 5 ]
 	then
-		CUDA_VERSION="11-4"
+		if [ "$kern_minor" -ge 15 -o "$kern_major" -gt 5 ]
+		then
+			CUDA_VERSION="12"
+		else
+			CUDA_VERSION="11-4"
+		fi
 		JETSON_NEW=1
 	else
 		CUDA_VERSION="10-2"
