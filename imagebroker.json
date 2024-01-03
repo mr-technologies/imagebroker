@@ -40,6 +40,7 @@
           "gpu_device_id": "cuda_dev",
           "elements": [
             { "id": "import_from_host", "type": "import_from_host" },
+            { "id": "bitdepth",         "type": "bitdepth" },
             { "id": "black_level",      "type": "black_level" },
             { "id": "white_balance",    "type": "white_balance" },
             { "id": "demosaic",         "type": "demosaic",         "algorithm": "L7" },
@@ -52,7 +53,8 @@
             { "id": "hist",             "type": "histogram",        "output_format": "Histogram4Bayer256Int", "output_name": "histogram" }
           ],
           "connections": [
-            { "src": "import_from_host", "dst": "black_level" },
+            { "src": "import_from_host", "dst": "bitdepth" },
+            { "src": "bitdepth",         "dst": "black_level" },
             { "src": "black_level",      "dst": "white_balance" },
             { "src": "white_balance",    "dst": "demosaic" },
             { "src": "demosaic",         "dst": "color_correction" },
