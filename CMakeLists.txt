@@ -87,7 +87,13 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
             )
 endif()
 
-find_package(OpenCV 4.5.2 REQUIRED)
+find_package(OpenCV 4.5.2 REQUIRED COMPONENTS core highgui imgproc OPTIONAL_COMPONENTS cudaimgproc)
+include(CheckSymbolExists)
+set(CMAKE_REQUIRED_LIBRARIES ${OpenCV_LIBS})
+check_symbol_exists(HAVE_OPENGL "opencv2/cvconfig.h" HAVE_OPENGL)
+if(NOT HAVE_OPENGL)
+    message(FATAL_ERROR "Missing OpenGL support in OpenCV")
+endif()
 message(STATUS "Found OpenCV ${OpenCV_VERSION}")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

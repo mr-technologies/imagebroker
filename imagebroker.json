@@ -44,9 +44,9 @@
             { "id": "black_level",      "type": "black_level" },
             { "id": "white_balance",    "type": "white_balance" },
             { "id": "demosaic",         "type": "demosaic",         "algorithm": "L7" },
-            { "id": "color_correction", "type": "color_correction", "matrix": [ 0.0, 0.0, 1.0,
+            { "id": "color_correction", "type": "color_correction", "matrix": [ 1.0, 0.0, 0.0,
                                                                                 0.0, 1.0, 0.0,
-                                                                                1.0, 0.0, 0.0 ] },
+                                                                                0.0, 0.0, 1.0 ] },
             { "id": "gamma",            "type": "gamma8",           "function": "hlg" },
             { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_hostmem", if OpenCV is built without CUDA or OpenGL support
                                                                     "output_format": "RGBA8",                 "output_name": "rgba" },

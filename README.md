@@ -10,10 +10,10 @@ It comes with example configuration file (`imagebroker.json`) providing the foll
   * histogram calculation
   * white balance
   * demosaicing
-  * color correction (swapping R and B channels in given application)
+  * color correction
   * gamma
   * image format conversion
-* automatic control of white balance
-* export image to the client code
+* automatic control of exposure time and white balance
+* image export to the client code
 
 Additionally example code renders images on the screen using [OpenCV](https://opencv.org/) library, which should be installed in the system (minimal required version is 4.5.2).

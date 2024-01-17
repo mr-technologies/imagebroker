@@ -1,8 +1,10 @@
 // std
+#include <cassert>
+#include <forward_list>
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <iterator>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <stdlib.h>
@@ -13,33 +15,27 @@
 #include <nlohmann/json.hpp>
 
 // OpenCV
-#include <opencv2/opencv.hpp>
-#include <opencv2/cvconfig.h>
-#if defined(HAVE_CUDA) && defined(HAVE_OPENGL)
 #include <opencv2/core/opengl.hpp>
-#define OPENCV_HAS_CUDA_AND_OPENGL 1
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/cvconfig.h>
+#ifdef HAVE_CUDA
+#include <opencv2/cudaimgproc.hpp>
 #else
-#pragma message("Missing CUDA or OpenGL support in OpenCV, make sure to adjust configuration file accordingly")
+#pragma message("Missing CUDA support in OpenCV, make sure to adjust configuration file accordingly")
 #endif
 
 // IFF SDK
 #include <iff.h>
 
 
-constexpr int MAX_WINDOW_WIDTH  = 1280;
-constexpr int MAX_WINDOW_HEIGHT = 1024;
-
-struct exporter_t
-{
-    std::function<void(const void*, size_t, iff_image_metadata*)> invoke;
-};
+constexpr int  MAX_WINDOW_WIDTH  = 1280;
+constexpr int  MAX_WINDOW_HEIGHT = 1024;
+constexpr char CONFIG_FILENAME[] = "imagebroker.json";
 
 int main()
 {
-    std::ifstream cfg_file("imagebroker.json");
-    const std::string config_str = { std::istreambuf_iterator<char>(cfg_file), std::istreambuf_iterator<char>() };
-
-    const auto config = nlohmann::json::parse(config_str, nullptr, true, true);
+    const auto config = nlohmann::json::parse(std::ifstream(CONFIG_FILENAME), nullptr, true, true);
     const auto it_chains = config.find("chains");
     if(it_chains == config.end())
     {
@@ -63,12 +59,13 @@ int main()
         return EXIT_FAILURE;
     }
 
-    iff_initialize(it_iff.value().dump().c_str());
+    iff_initialize(it_iff->dump().c_str());
 
     std::vector<iff_chain_handle_t> chain_handles;
-    for(const auto& chain_config : it_chains.value())
+    for(const auto& chain_config : *it_chains)
     {
-        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(), [](const char* element_name, int error_code)
+        const auto chain_handle = iff_create_chain(chain_config.dump().c_str(),
+                [](const char* const element_name, const int error_code)
                 {
                     std::ostringstream message;
                     message << "Chain element `" << element_name << "` reported an error: " << error_code;
@@ -76,86 +73,202 @@ int main()
                 });
         chain_handles.push_back(chain_handle);
     }
-
-    const auto& current_chain = chain_handles.front();
-
-#if OPENCV_HAS_CUDA_AND_OPENGL
-    using Mat = cv::cuda::GpuMat;
-#else
-    using Mat = cv::Mat;
-#endif
-    std::mutex render_mutex;
-    Mat render_image;
-
-    exporter_t export_func;
-    export_func.invoke = [&](const void* data, size_t size, iff_image_metadata* metadata)
+    const auto total_chains = chain_handles.size();
+    size_t grid_x = 1;
+    size_t grid_y = 1;
+    while(grid_x * grid_y < total_chains)
     {
-        void* const img_data = const_cast<void*>(data);
-        const auto pitch = metadata->width * 4u + metadata->padding;
-        if(size < pitch * metadata->height)
+        ++grid_x;
+        if(grid_x * grid_y >= total_chains)
         {
-            std::ostringstream message;
-            message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
-            iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
-            return;
-        }
-        Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, img_data, pitch);
-        std::lock_guard<std::mutex> render_lock(render_mutex);
-        src_image.copyTo(render_image);
-    };
-    iff_set_export_callback(current_chain, "exporter",
-                            [](const void* data, size_t size, iff_image_metadata* metadata, void* private_data)
-                            {
-                                auto export_function = (exporter_t*)private_data;
-                                export_function->invoke(data, size, metadata);
-                            },
-                            &export_func);
-
-    iff_execute(current_chain, nlohmann::json{ { "exporter", { { "command", "on" } } } }.dump().c_str());
-
-    const std::string window_name = "IFF SDK Image Broker Sample";
-    bool size_set = false;
-#if OPENCV_HAS_CUDA_AND_OPENGL
-    cv::namedWindow(window_name, cv::WINDOW_NORMAL | cv::WINDOW_OPENGL);
-    cv::setWindowProperty(window_name, cv::WND_PROP_VSYNC, 1);
-    cv::ogl::Texture2D tex;
-#else
-    cv::namedWindow(window_name, cv::WINDOW_NORMAL);
-#endif
-
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
-    while(true)
-    {
-        if((cv::pollKey() & 0xffff) == 27)
-        {
-            iff_log(IFF_LOG_LEVEL_INFO, "Esc key was pressed, stopping the program");
             break;
         }
-        std::lock_guard<std::mutex> render_lock(render_mutex);
-        if(!render_image.empty())
+        ++grid_y;
+    }
+
+#ifdef HAVE_CUDA
+    using Mat = cv::cuda::GpuMat;
+    namespace imgproc = cv::cuda;
+#else
+    using Mat = cv::Mat;
+    namespace imgproc = cv;
+#endif
+    using exporter_t = std::function<void(const void*, size_t, const iff_image_metadata*)>;
+    auto export_callbacks = std::vector<exporter_t>(total_chains);
+    auto buffer_mutexes = std::vector<std::mutex>(total_chains);
+    auto pending_buffers = std::vector<std::unique_ptr<Mat>>(total_chains);
+    auto unused_buffer_lists = std::vector<std::forward_list<std::unique_ptr<Mat>>>(total_chains);
+    for(size_t i = 0; i < total_chains; ++i)
+    {
+        for(int j = 0; j < 3; ++j) //one buffer currently rendering, one buffer already filled, one buffer currently filling
         {
-            if(!size_set)
+            unused_buffer_lists[i].emplace_front(new Mat());
+        }
+        export_callbacks[i] = [&, i](const void* const data, const size_t size, const iff_image_metadata* const metadata)
+                {
+                    const auto pitch = metadata->width * size_t{4} + metadata->padding;
+                    if(size < pitch * metadata->height)
+                    {
+                        std::ostringstream message;
+                        message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
+                        iff_log(IFF_LOG_LEVEL_WARNING, message.str().c_str());
+                        return;
+                    }
+                    const Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, const_cast<void*>(data), pitch);
+                    auto& unused_buffer_list = unused_buffer_lists[i];
+                    std::unique_ptr<Mat> pending_buffer;
+                    {
+                        std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
+                        assert(!unused_buffer_list.empty());
+                        pending_buffer = std::move(unused_buffer_list.front());
+                        unused_buffer_list.pop_front();
+                    }
+                    imgproc::cvtColor(src_image, *pending_buffer, cv::COLOR_RGBA2BGRA); //OpenCV requires BGR channel order
+                    {
+                        std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
+                        pending_buffers[i].swap(pending_buffer);
+                        if(pending_buffer)
+                        {
+                            unused_buffer_list.push_front(std::move(pending_buffer));
+                        }
+                    }
+                };
+        const auto& chain_handle = chain_handles[i];
+        iff_set_export_callback(chain_handle, "exporter",
+                [](const void* const data, const size_t size, iff_image_metadata* const metadata, void* const private_data)
+                {
+                    const auto export_function = reinterpret_cast<const exporter_t*>(private_data);
+                    (*export_function)(data, size, metadata);
+                },
+                &export_callbacks[i]);
+        iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str());
+    }
+
+    const std::string window_name = "IFF SDK Image Broker Sample";
+    cv::namedWindow(window_name, cv::WINDOW_NORMAL | cv::WINDOW_OPENGL);
+    cv::setWindowProperty(window_name, cv::WND_PROP_VSYNC, 1);
+    using renderer_t = std::function<void()>;
+    renderer_t render_callback = [&]()
             {
-                auto size = render_image.size();
+                static auto textures = std::vector<cv::ogl::Texture2D>(total_chains);
+                for(size_t i = 0; i < total_chains; ++i)
+                {
+                    std::unique_ptr<Mat> pending_buffer;
+                    {
+                        std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
+                        pending_buffer = std::move(pending_buffers[i]);
+                    }
+                    if(pending_buffer)
+                    {
+                        textures[i].copyFrom(*pending_buffer);
+                        std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
+                        unused_buffer_lists[i].push_front(std::move(pending_buffer));
+                    }
+                }
+                for(size_t y = 0; y < grid_y; ++y)
+                {
+                    for(size_t x = 0; x < grid_x; ++x)
+                    {
+                        const auto i = grid_x * y + x;
+                        if(i >= total_chains)
+                        {
+                            break;
+                        }
+                        // image aspect ratio might not be preserved
+                        cv::ogl::render(textures[i], { x * 1. / grid_x, y * 1. / grid_y, 1. / grid_x, 1. / grid_y });
+                    }
+                }
+            };
+    cv::setOpenGlDrawCallback(window_name,
+            [](void* const private_data)
+            {
+                const auto render_function = reinterpret_cast<const renderer_t*>(private_data);
+                (*render_function)();
+            },
+            &render_callback);
+
+    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
+    bool size_set = false;
+    bool rendering = true;
+    while(true)
+    {
+        const auto keycode = cv::pollKey();
+        if(keycode != -1)
+        {
+            if((keycode & 0xff) == 27)
+            {
+                iff_log(IFF_LOG_LEVEL_INFO, "Esc key was pressed, stopping the program");
+                break;
+            }
+            else if((keycode & 0xff) == 8)
+            {
+                iff_log(IFF_LOG_LEVEL_INFO, "Backspace key was pressed, disabling acquisition");
+                for(const auto chain_handle : chain_handles)
+                {
+                    iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "off"}}}}.dump().c_str());
+                }
+            }
+            else if((keycode & 0xff) == 13)
+            {
+                iff_log(IFF_LOG_LEVEL_INFO, "Enter key was pressed, enabling acquisition");
+                for(const auto chain_handle : chain_handles)
+                {
+                    iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str());
+                }
+            }
+            else if((keycode & 0xff) == 32)
+            {
+                if(rendering)
+                {
+                    iff_log(IFF_LOG_LEVEL_INFO, "Space key was pressed, pausing rendering");
+                    rendering = false;
+                }
+                else
+                {
+                    iff_log(IFF_LOG_LEVEL_INFO, "Space key was pressed, resuming rendering");
+                    rendering = true;
+                }
+            }
+            else
+            {
+                std::ostringstream message;
+                message << "Key press ignored, code: " << keycode;
+                iff_log(IFF_LOG_LEVEL_DEBUG, message.str().c_str());
+            }
+        }
+        if(!size_set)
+        {
+            // try to preserve image aspect ratio by sizing the window accordingly
+            // (assuming all chains produce images with the same aspect ratio)
+            cv::Size size;
+            {
+                std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[0]);
+                if(pending_buffers[0])
+                {
+                    size = pending_buffers[0]->size();
+                }
+            }
+            if(!size.empty())
+            {
+                size.width *= static_cast<int>(grid_x);
+                size.height *= static_cast<int>(grid_y);
                 if(size.width > MAX_WINDOW_WIDTH)
                 {
-                    size.height = static_cast<decltype(size)::value_type>(MAX_WINDOW_WIDTH / size.aspectRatio());
+                    size.height = static_cast<cv::Size::value_type>(MAX_WINDOW_WIDTH / size.aspectRatio());
                     size.width = MAX_WINDOW_WIDTH;
                 }
                 if(size.height > MAX_WINDOW_HEIGHT)
                 {
-                    size.width = static_cast<decltype(size)::value_type>(MAX_WINDOW_HEIGHT * size.aspectRatio());
+                    size.width = static_cast<cv::Size::value_type>(MAX_WINDOW_HEIGHT * size.aspectRatio());
                     size.height = MAX_WINDOW_HEIGHT;
                 }
                 cv::resizeWindow(window_name, size);
                 size_set = true;
             }
-#if OPENCV_HAS_CUDA_AND_OPENGL
-            tex.copyFrom(render_image);
-            cv::imshow(window_name, tex);
-#else
-            cv::imshow(window_name, render_image);
-#endif
+        }
+        if(rendering)
+        {
+            cv::updateWindow(window_name);
         }
     }
 
