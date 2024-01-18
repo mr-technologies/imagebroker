@@ -31,17 +31,18 @@ elseif(UNIX)
 endif()
 
 file(GENERATE OUTPUT CopyConfig-$<CONFIG>.cmake CONTENT "
-        if(NOT EXISTS $<TARGET_FILE_DIR:${PROJECT_NAME}>/${PROJECT_NAME}.json)
+        if(NOT EXISTS \${DEST_DIR}/${PROJECT_NAME}.json)
             file(INSTALL
                     ${PROJECT_NAME}.json
-                    DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>
+                    DESTINATION \${DEST_DIR}
                     )
         endif()
         ")
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CopyConfig-$<CONFIG>.cmake
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        VERBATIM
+        VERBATIM COMMAND ${CMAKE_COMMAND}
+        -D "DEST_DIR=$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+        -P ${CMAKE_CURRENT_BINARY_DIR}/CopyConfig-$<CONFIG>.cmake
         )
 
 if(NOT TARGET IFF::iffsdk)
@@ -67,14 +68,15 @@ if(NOT TARGET IFF::iffsdk)
     file(GENERATE OUTPUT CopySDK-$<CONFIG>.cmake CONTENT "
             file(INSTALL
                     sdk/lib/
-                    DESTINATION $<TARGET_FILE_DIR:${PROJECT_NAME}>
+                    DESTINATION \${DEST_DIR}
                     FILES_MATCHING PATTERN \"${CMAKE_SHARED_LIBRARY_PREFIX}*${CMAKE_SHARED_LIBRARY_SUFFIX}\"
                     )
             ")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CopySDK-$<CONFIG>.cmake
             WORKING_DIRECTORY ${IFF_SDK_ROOT}
-            VERBATIM
+            VERBATIM COMMAND ${CMAKE_COMMAND}
+            -D "DEST_DIR=$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+            -P ${CMAKE_CURRENT_BINARY_DIR}/CopySDK-$<CONFIG>.cmake
             )
 endif()
 
