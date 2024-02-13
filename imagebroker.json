@@ -48,7 +48,7 @@
                                                                                 0.0, 1.0, 0.0,
                                                                                 0.0, 0.0, 1.0 ] },
             { "id": "gamma",            "type": "gamma8",           "function": "hlg" },
-            { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_hostmem", if OpenCV is built without CUDA or OpenGL support
+            { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_hostmem", if OpenCV is built without CUDA support
                                                                     "output_format": "RGBA8",                 "output_name": "rgba" },
             { "id": "hist",             "type": "histogram",        "output_format": "Histogram4Bayer256Int", "output_name": "histogram" }
           ],
@@ -76,7 +76,7 @@
         {
           "id": "exporter",
           "type": "frame_exporter",
-          "device_id": "cuda_dev" //change "cuda_dev" to "cpu_dev", if OpenCV is built without CUDA or OpenGL support
+          "device_id": "cuda_dev" //change "cuda_dev" to "cpu_dev", if OpenCV is built without CUDA support
         }
       ],
       "connections": [

@@ -7,7 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -29,6 +29,7 @@
 #include <iff.h>
 
 
+//#define IMAGE_MONO
 constexpr int  MAX_WINDOW_WIDTH  = 1280;
 constexpr int  MAX_WINDOW_HEIGHT = 1024;
 constexpr char CONFIG_FILENAME[] = "imagebroker.json";
@@ -105,34 +106,46 @@ int main()
             unused_buffer_lists[i].emplace_front(new Mat());
         }
         export_callbacks[i] = [&, i](const void* const data, const size_t size, const iff_image_metadata* const metadata)
+        {
+            #ifdef IMAGE_MONO
+                const auto pitch = metadata->width * size_t{1} + metadata->padding;
+            #else
+                const auto pitch = metadata->width * size_t{4} + metadata->padding;
+            #endif
+            if(size < pitch * metadata->height)
+            {
+                std::ostringstream message;
+                message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
+                iff_log(IFF_LOG_LEVEL_WARNING, message.str().c_str());
+                return;
+            }
+            #ifdef IMAGE_MONO
+                const Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC1, const_cast<void*>(data), pitch);
+            #else
+                const Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, const_cast<void*>(data), pitch);
+            #endif
+            auto& unused_buffer_list = unused_buffer_lists[i];
+            std::unique_ptr<Mat> pending_buffer;
+            {
+                std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
+                assert(!unused_buffer_list.empty());
+                pending_buffer = std::move(unused_buffer_list.front());
+                unused_buffer_list.pop_front();
+            }
+            #ifdef IMAGE_MONO
+                imgproc::cvtColor(src_image, *pending_buffer, cv::COLOR_GRAY2BGRA);
+            #else
+                imgproc::cvtColor(src_image, *pending_buffer, cv::COLOR_RGBA2BGRA); //OpenCV requires BGR channel order
+            #endif
+            {
+                std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
+                pending_buffers[i].swap(pending_buffer);
+                if(pending_buffer)
                 {
-                    const auto pitch = metadata->width * size_t{4} + metadata->padding;
-                    if(size < pitch * metadata->height)
-                    {
-                        std::ostringstream message;
-                        message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
-                        iff_log(IFF_LOG_LEVEL_WARNING, message.str().c_str());
-                        return;
-                    }
-                    const Mat src_image(cv::Size(metadata->width, metadata->height), CV_8UC4, const_cast<void*>(data), pitch);
-                    auto& unused_buffer_list = unused_buffer_lists[i];
-                    std::unique_ptr<Mat> pending_buffer;
-                    {
-                        std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
-                        assert(!unused_buffer_list.empty());
-                        pending_buffer = std::move(unused_buffer_list.front());
-                        unused_buffer_list.pop_front();
-                    }
-                    imgproc::cvtColor(src_image, *pending_buffer, cv::COLOR_RGBA2BGRA); //OpenCV requires BGR channel order
-                    {
-                        std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
-                        pending_buffers[i].swap(pending_buffer);
-                        if(pending_buffer)
-                        {
-                            unused_buffer_list.push_front(std::move(pending_buffer));
-                        }
-                    }
-                };
+                    unused_buffer_list.push_front(std::move(pending_buffer));
+                }
+            }
+        };
         const auto& chain_handle = chain_handles[i];
         iff_set_export_callback(chain_handle, "exporter",
                 [](const void* const data, const size_t size, iff_image_metadata* const metadata, void* const private_data)
