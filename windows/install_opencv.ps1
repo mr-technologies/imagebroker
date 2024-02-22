@@ -1,5 +1,5 @@
 # Adjust the following settings as needed
-$VS_INSTALL_PATH="${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools"
+$VS_INSTALL_PATH="${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools"
 $OPENCV_VERSION="4.8.0"
 $WITH_CUDA="ON"
 
