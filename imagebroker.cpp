@@ -1,5 +1,6 @@
 // std
 #include <cassert>
+#include <cstdlib>
 #include <forward_list>
 #include <fstream>
 #include <functional>
@@ -7,7 +8,6 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
-#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -164,6 +164,10 @@ int main()
     renderer_t render_callback = [&]()
             {
                 static auto textures = std::vector<cv::ogl::Texture2D>(total_chains);
+#ifdef HAVE_CUDA
+                static auto buffers  = std::vector<cv::ogl::Buffer>   (total_chains);
+                static auto gpumats  = std::vector<cv::cuda::GpuMat>  (total_chains);
+#endif
                 for(size_t i = 0; i < total_chains; ++i)
                 {
                     std::unique_ptr<Mat> pending_buffer;
@@ -173,7 +177,27 @@ int main()
                     }
                     if(pending_buffer)
                     {
+#ifdef HAVE_CUDA
+                        // When copying from cuda::GpuMat to ogl::Texture2D OpenCV creates temporary ogl::Buffer
+                        // and registers it with CUDA (cudaGraphicsGLRegisterBuffer function) each time.
+                        // This seems to be unnecessary and problematic (fails after some time) on Windows
+                        // (at least when NVDEC function cuvidMapVideoFrame is also used in another thread).
+                        // Instead create ogl::Buffer and map it as cuda::GpuMat once - this is faster and more stable.
+                        // Source for the fact that mapping can be done just once:
+                        // https://web.archive.org/web/20180611003604/https://github.com/nvpro-samples/gl_cuda_interop_pingpong_st#but-how-do-i-read-and-write-to-gl_texture_3d-in-cuda-and-what-will-it-cost-me
+                        // Error message without this optimization:
+                        // OpenCV(4.6.0) Error: Gpu API call (unknown error) in `anonymous-namespace'::CudaResource::registerBuffer, file ...\opencv-4.6.0\modules\core\src\opengl.cpp, line 176
+                        if(buffers[i].size() != pending_buffer->size())
+                        {
+                            buffers[i].create(pending_buffer->size(), pending_buffer->type(), cv::ogl::Buffer::Target::PIXEL_UNPACK_BUFFER);
+                            gpumats[i] = buffers[i].mapDevice();
+                            buffers[i].unmapDevice();
+                        }
+                        pending_buffer->copyTo(gpumats[i]);
+                        textures[i].copyFrom(buffers[i]);
+#else
                         textures[i].copyFrom(*pending_buffer);
+#endif
                         std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[i]);
                         unused_buffer_lists[i].push_front(std::move(pending_buffer));
                     }
