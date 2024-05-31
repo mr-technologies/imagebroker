@@ -1,6 +1,6 @@
 # Adjust the following settings as needed
 $VS_INSTALL_PATH="${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools"
-$OPENCV_VERSION="4.8.0"
+$OPENCV_VERSION="4.9.0"
 $WITH_CUDA="ON"
 
 $ErrorActionPreference="Stop"
@@ -25,13 +25,13 @@ try
 
 	"Configuring modules..."
 	mkdir build\release
-	cmake -DCMAKE_BUILD_TYPE=Release "-DOPENCV_EXTRA_MODULES_PATH=build/opencv_contrib-${OPENCV_VERSION}/modules" -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_OPENGL=ON "-DWITH_CUDA=${WITH_CUDA}" -DCUDA_FAST_MATH=ON -G Ninja -B build\release "build\opencv-${OPENCV_VERSION}"
+	cmake -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release "-DOPENCV_EXTRA_MODULES_PATH=build/opencv_contrib-${OPENCV_VERSION}/modules" -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DWITH_OPENGL=ON "-DWITH_CUDA=${WITH_CUDA}" -DCUDA_FAST_MATH=ON -G Ninja -B build\release "build\opencv-${OPENCV_VERSION}"
 	"Configuration done."
 
 	"Building..."
 	cmake --build build\release
 	"Installing..."
-	cmake --install build\release --prefix install
+	cmake --install build\release
 
 	$failed=$false
 	"OpenCV ${OPENCV_VERSION} has been successfully installed."
