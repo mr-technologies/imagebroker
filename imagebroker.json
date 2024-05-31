@@ -38,15 +38,18 @@
           "type": "cuda_processor",
           "cpu_device_id": "cpu_dev",
           "gpu_device_id": "cuda_dev",
+          "color": {
+            "dcp_file": "BT709.dcp"
+          },
           "elements": [
             { "id": "import_from_host", "type": "import_from_host" },
-            { "id": "bitdepth",         "type": "bitdepth" },
+            { "id": "bitdepth",         "type": "bitdepth",         "bitdepth": 16 },
             { "id": "black_level",      "type": "black_level" },
             { "id": "white_balance",    "type": "white_balance" },
             { "id": "demosaic",         "type": "demosaic",         "algorithm": "L7" },
-            { "id": "color_correction", "type": "color_correction", "matrix": [ 1.0, 0.0, 0.0,
-                                                                                0.0, 1.0, 0.0,
-                                                                                0.0, 0.0, 1.0 ] },
+            { "id": "color_correction", "type": "color_correction", "to": "ProPhotoRGB" },
+            { "id": "huesatmap",        "type": "huesatmap" },
+            { "id": "color_space_out",  "type": "color_correction", "from": "ProPhotoRGB", "to": "Rec709" },
             { "id": "gamma",            "type": "gamma8",           "function": "hlg" },
             { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_hostmem", if OpenCV is built without CUDA support
                                                                     "output_format": "RGBA8",                 "output_name": "rgba" },
@@ -58,7 +61,9 @@
             { "src": "black_level",      "dst": "white_balance" },
             { "src": "white_balance",    "dst": "demosaic" },
             { "src": "demosaic",         "dst": "color_correction" },
-            { "src": "color_correction", "dst": "gamma" },
+            { "src": "color_correction", "dst": "huesatmap" },
+            { "src": "huesatmap",        "dst": "color_space_out" },
+            { "src": "color_space_out",  "dst": "gamma" },
             { "src": "gamma",            "dst": "export" },
             { "src": "black_level",      "dst": "hist" }
           ]

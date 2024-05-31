@@ -37,6 +37,10 @@ file(GENERATE OUTPUT CopyConfig-$<CONFIG>.cmake CONTENT "
                     DESTINATION \${DEST_DIR}
                     )
         endif()
+        file(INSTALL
+                res/BT709.dcp
+                DESTINATION \${DEST_DIR}
+                )
         ")
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
