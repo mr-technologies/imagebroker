@@ -78,6 +78,7 @@ echo "Configuring modules..."
 mkdir build_release
 cd build_release
 CONFIG="-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-${OPENCV_VERSION}/modules \
+	-DPYTHON3_PACKAGES_PATH=lib/python$(python3 -c 'import sysconfig;print(sysconfig.get_python_version())')/dist-packages \
 	-DBUILD_TESTS=OFF \
 	-DBUILD_PERF_TESTS=OFF \
 	-DWITH_GTK_2_X=ON \
