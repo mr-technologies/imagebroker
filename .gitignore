@@ -1,4 +1,7 @@
 /*build*/
+/linux/opencv/
+/windows/build/
+/windows/install/
 
 # cscope
 cscope.out
