@@ -1,6 +1,7 @@
 // std
 #include <cassert>
 #include <cstdlib>
+#include <exception>
 #include <forward_list>
 #include <fstream>
 #include <functional>
@@ -36,7 +37,16 @@ constexpr char CONFIG_FILENAME[] = "imagebroker.json";
 
 int main()
 {
-    const auto config = nlohmann::json::parse(std::ifstream(CONFIG_FILENAME), nullptr, true, true);
+    nlohmann::json config;
+    try
+    {
+        config = nlohmann::json::parse(std::ifstream(CONFIG_FILENAME), nullptr, true, true);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << "Invalid configuration provided: " << e.what() << "\n";
+        return EXIT_FAILURE;
+    }
     const auto it_chains = config.find("chains");
     if(it_chains == config.end())
     {

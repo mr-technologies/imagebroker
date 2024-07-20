@@ -1,5 +1,7 @@
 {
   "IFF": {
+    "set_terminate": true,
+
     "devices": [
       {
         "id": "cpu_dev",
