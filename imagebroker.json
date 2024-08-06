@@ -53,7 +53,7 @@
             { "id": "huesatmap",        "type": "huesatmap" },
             { "id": "color_space_out",  "type": "color_correction", "from": "ProPhotoRGB", "to": "Rec709" },
             { "id": "gamma",            "type": "gamma8",           "function": "hlg" },
-            { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_hostmem", if OpenCV is built without CUDA support
+            { "id": "export",           "type": "export_to_device", //change "export_to_device" to "export_to_host", if OpenCV is built without CUDA support
                                                                     "output_format": "RGBA8",                 "output_name": "rgba" },
             { "id": "hist",             "type": "histogram",        "output_format": "Histogram4Bayer256Int", "output_name": "histogram" }
           ],
