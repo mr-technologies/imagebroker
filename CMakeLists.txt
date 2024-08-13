@@ -73,7 +73,7 @@ if(NOT TARGET IFF::iffsdk)
             file(INSTALL
                     sdk/lib/
                     DESTINATION \${DEST_DIR}
-                    FILES_MATCHING PATTERN \"${CMAKE_SHARED_LIBRARY_PREFIX}*${CMAKE_SHARED_LIBRARY_SUFFIX}\"
+                    $<$<PLATFORM_ID:Windows>:PATTERN \"*${CMAKE_LINK_LIBRARY_SUFFIX}\" EXCLUDE>
                     )
             ")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
