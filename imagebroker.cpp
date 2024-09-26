@@ -31,6 +31,8 @@
 
 
 //#define IMAGE_MONO
+constexpr bool ENABLE_VSYNC      = true; //prevents tearing, but may increase latency
+constexpr bool WINDOW_FULLSCREEN = false;
 constexpr int  MAX_WINDOW_WIDTH  = 1280;
 constexpr int  MAX_WINDOW_HEIGHT = 1024;
 constexpr char CONFIG_FILENAME[] = "imagebroker.json";
@@ -169,7 +171,11 @@ int main()
 
     const std::string window_name = "IFF SDK Image Broker Sample";
     cv::namedWindow(window_name, cv::WINDOW_NORMAL | cv::WINDOW_OPENGL);
-    cv::setWindowProperty(window_name, cv::WND_PROP_VSYNC, 1);
+    cv::setWindowProperty(window_name, cv::WND_PROP_VSYNC, ENABLE_VSYNC ? 1 : 0);
+    if(WINDOW_FULLSCREEN)
+    {
+        cv::setWindowProperty(window_name, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
+    }
     using renderer_t = std::function<void()>;
     renderer_t render_callback = [&]()
             {
@@ -235,7 +241,7 @@ int main()
             &render_callback);
 
     iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
-    bool size_set = false;
+    bool size_set = WINDOW_FULLSCREEN;
     bool rendering = true;
     while(true)
     {
