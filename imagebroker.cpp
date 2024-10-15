@@ -80,12 +80,13 @@ int main()
     for(const auto& chain_config : *it_chains)
     {
         const auto chain_handle = iff_create_chain(chain_config.dump().c_str(),
-                [](const char* const element_name, const int error_code)
-                {
-                    std::ostringstream message;
-                    message << "Chain element `" << element_name << "` reported an error: " << error_code;
-                    iff_log(IFF_LOG_LEVEL_ERROR, message.str().c_str());
-                });
+                                                   [](const char* element_name, int error_code, void*)
+                                                   {
+                                                       std::ostringstream message;
+                                                       message << "Chain element `" << element_name << "` reported an error: " << error_code;
+                                                       iff_log(IFF_LOG_LEVEL_ERROR, "imagebroker", message.str().c_str());
+                                                   },
+                                                   nullptr);
         chain_handles.push_back(chain_handle);
     }
     const auto total_chains = chain_handles.size();
@@ -133,7 +134,7 @@ int main()
             {
                 std::ostringstream message;
                 message << "Ignoring invalid buffer: " << metadata->width << "x" << metadata->height << "+" << metadata->padding << " " << size << " bytes";
-                iff_log(IFF_LOG_LEVEL_WARNING, message.str().c_str());
+                iff_log(IFF_LOG_LEVEL_WARNING, "imagebroker", message.str().c_str());
                 return;
             }
             #ifdef IMAGE_MONO
@@ -176,7 +177,7 @@ int main()
                     (*export_function)(data, size, metadata);
                 },
                 &export_callbacks[i]);
-        iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str());
+        iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str(), [](const char*, void*){}, nullptr);
     }
 
     const std::string window_name = "IFF SDK Image Broker Sample";
@@ -254,7 +255,7 @@ int main()
             },
             &render_callback);
 
-    iff_log(IFF_LOG_LEVEL_INFO, "Press Esc to terminate the program");
+    iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Press Esc to terminate the program");
     bool size_set = WINDOW_FULLSCREEN;
     bool rendering = true;
     while(true)
@@ -264,35 +265,35 @@ int main()
         {
             if((keycode & 0xff) == 27)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Esc key was pressed, stopping the program");
+                iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Esc key was pressed, stopping the program");
                 break;
             }
             else if((keycode & 0xff) == 8)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Backspace key was pressed, disabling acquisition");
+                iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Backspace key was pressed, disabling acquisition");
                 for(const auto chain_handle : chain_handles)
                 {
-                    iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "off"}}}}.dump().c_str());
+                    iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "off"}}}}.dump().c_str(), [](const char*, void*){}, nullptr);
                 }
             }
             else if((keycode & 0xff) == 13)
             {
-                iff_log(IFF_LOG_LEVEL_INFO, "Enter key was pressed, enabling acquisition");
+                iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Enter key was pressed, enabling acquisition");
                 for(const auto chain_handle : chain_handles)
                 {
-                    iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str());
+                    iff_execute(chain_handle, nlohmann::json{{"exporter", {{"command", "on"}}}}.dump().c_str(), [](const char*, void*){}, nullptr);
                 }
             }
             else if((keycode & 0xff) == 32)
             {
                 if(rendering)
                 {
-                    iff_log(IFF_LOG_LEVEL_INFO, "Space key was pressed, pausing rendering");
+                    iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Space key was pressed, pausing rendering");
                     rendering = false;
                 }
                 else
                 {
-                    iff_log(IFF_LOG_LEVEL_INFO, "Space key was pressed, resuming rendering");
+                    iff_log(IFF_LOG_LEVEL_INFO, "imagebroker", "Space key was pressed, resuming rendering");
                     rendering = true;
                 }
             }
@@ -300,7 +301,7 @@ int main()
             {
                 std::ostringstream message;
                 message << "Key press ignored, code: " << keycode;
-                iff_log(IFF_LOG_LEVEL_DEBUG, message.str().c_str());
+                iff_log(IFF_LOG_LEVEL_DEBUG, "imagebroker", message.str().c_str());
             }
         }
         if(rendering)
