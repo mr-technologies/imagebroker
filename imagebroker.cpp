@@ -303,41 +303,41 @@ int main()
                 iff_log(IFF_LOG_LEVEL_DEBUG, message.str().c_str());
             }
         }
-        if(!size_set)
-        {
-            // try to preserve image aspect ratio by sizing the window accordingly
-            // (assuming all chains produce images with the same aspect ratio)
-            cv::Size size;
-            {
-                std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[0]);
-                if(pending_buffers[0])
-                {
-                    size = pending_buffers[0]->size();
-                }
-            }
-            if(!size.empty())
-            {
-                size.width *= static_cast<int>(grid_x);
-                size.height *= static_cast<int>(grid_y);
-                if(size.width > MAX_WINDOW_WIDTH)
-                {
-                    size.height = static_cast<cv::Size::value_type>(MAX_WINDOW_WIDTH / size.aspectRatio());
-                    size.width = MAX_WINDOW_WIDTH;
-                }
-                if(size.height > MAX_WINDOW_HEIGHT)
-                {
-                    size.width = static_cast<cv::Size::value_type>(MAX_WINDOW_HEIGHT * size.aspectRatio());
-                    size.height = MAX_WINDOW_HEIGHT;
-                }
-                cv::resizeWindow(window_name, size);
-                size_set = true;
-            }
-        }
         if(rendering)
         {
             {
                 std::unique_lock<std::mutex> render_lock(render_mutex);
                 render_cond.wait_for(render_lock, std::chrono::seconds(1), [&](){ return render_requested; });
+            }
+            if(!size_set)
+            {
+                // try to preserve image aspect ratio by sizing the window accordingly
+                // (assuming all chains produce images with the same aspect ratio)
+                cv::Size size;
+                {
+                    std::lock_guard<std::mutex> buffer_lock(buffer_mutexes[0]);
+                    if(pending_buffers[0])
+                    {
+                        size = pending_buffers[0]->size();
+                    }
+                }
+                if(!size.empty())
+                {
+                    size.width *= static_cast<int>(grid_x);
+                    size.height *= static_cast<int>(grid_y);
+                    if(size.width > MAX_WINDOW_WIDTH)
+                    {
+                        size.height = static_cast<cv::Size::value_type>(MAX_WINDOW_WIDTH / size.aspectRatio());
+                        size.width = MAX_WINDOW_WIDTH;
+                    }
+                    if(size.height > MAX_WINDOW_HEIGHT)
+                    {
+                        size.width = static_cast<cv::Size::value_type>(MAX_WINDOW_HEIGHT * size.aspectRatio());
+                        size.height = MAX_WINDOW_HEIGHT;
+                    }
+                    cv::resizeWindow(window_name, size);
+                    size_set = true;
+                }
             }
             cv::updateWindow(window_name);
         }
