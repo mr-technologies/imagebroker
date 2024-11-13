@@ -91,6 +91,8 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
             )
 endif()
 
+find_package(Threads REQUIRED)
+
 find_package(OpenCV 4.5.2 REQUIRED COMPONENTS core highgui imgproc OPTIONAL_COMPONENTS cudaimgproc)
 include(CheckCXXSymbolExists)
 set(CMAKE_REQUIRED_LIBRARIES ${OpenCV_LIBS})
@@ -104,4 +106,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         IFF::iffsdk
         nlohmann_json::nlohmann_json
         ${OpenCV_LIBS}
+        Threads::Threads
         )
