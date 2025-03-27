@@ -1,8 +1,8 @@
 # `imagebroker`
 
-`imagebroker` application demonstrates how to export images to the user code across IFF SDK library boundaries.
-Application is located in `samples/02_export` directory of IFF SDK package.
-It comes with example configuration file (`imagebroker.json`) providing the following functionality:
+`imagebroker` application demonstrates how to export images to the user code from C API of [MRTech IFF SDK](https://mr-te.ch/iff-sdk).
+It is located in `samples/02_export` directory of IFF SDK package.
+Application comes with example configuration file (`imagebroker.json`) providing the following functionality:
 
 * acquisition from XIMEA camera
 * color pre-processing on GPU:
