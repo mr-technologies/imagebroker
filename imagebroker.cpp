@@ -344,6 +344,8 @@ int main()
         }
     }
 
+    cv::destroyWindow(window_name);
+
     for(const auto chain_handle : chain_handles)
     {
         iff_release_chain(chain_handle);
