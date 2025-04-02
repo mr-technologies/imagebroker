@@ -9,7 +9,7 @@ then
 fi
 
 # Adjust as needed
-OPENCV_VERSION="4.9.0"
+OPENCV_VERSION="4.10.0"
 if [ $JETSON ]
 then
 	kern_ver="$(uname -r)"
@@ -30,8 +30,11 @@ then
 		JETSON_OLD=1
 	fi
 else
-	CUDA_VERSION="11-7"
+	CUDA_VERSION="12-6"
 fi
+
+mkdir opencv
+cd opencv
 
 echo "Installing dependencies..."
 sudo apt update
@@ -44,9 +47,11 @@ sudo apt install -y \
 	libopenexr-dev \
 	libopenjp2-7-dev \
 	libpng-dev \
+	libpython3-dev \
 	libtiff-dev \
 	libwebp-dev \
 	pkg-config \
+	python3-numpy \
 	unzip
 if [ $JETSON_OLD ]
 then
@@ -56,12 +61,12 @@ if [ $JETSON ]
 then
 	sudo apt install -y cuda-toolkit-${CUDA_VERSION}
 else
+	wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu"$(lsb_release -rs 2> /dev/null | tr -d .)"/x86_64/cuda-keyring_1.1-1_all.deb
+	sudo dpkg -i cuda-keyring_1.1-1_all.deb
+	sudo apt update
 	sudo apt install -y cuda-minimal-build-${CUDA_VERSION} cuda-libraries-dev-${CUDA_VERSION}
 fi
 echo "Done."
-
-mkdir opencv
-cd opencv
 
 echo "Downloading OpenCV and Contribs Modules..."
 curl -L https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip -o opencv-${OPENCV_VERSION}.zip

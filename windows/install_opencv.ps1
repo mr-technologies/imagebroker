@@ -1,6 +1,6 @@
 # Adjust the following settings as needed
 $VS_INSTALL_PATH="${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools"
-$OPENCV_VERSION="4.9.0"
+$OPENCV_VERSION="4.10.0"
 $WITH_CUDA="ON"
 
 $ErrorActionPreference="Stop"
@@ -9,6 +9,10 @@ $failed=$true
 try
 {
 	mkdir build
+
+	"Installing Python numpy..."
+	python -m pip install --upgrade pip
+	pip install --upgrade numpy
 
 	Import-Module "${VS_INSTALL_PATH}\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
 	Enter-VsDevShell -VsInstallPath "${VS_INSTALL_PATH}" -DevCmdArguments "-arch=x64 -host_arch=x64"
