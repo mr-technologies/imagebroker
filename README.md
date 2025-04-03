@@ -14,6 +14,6 @@ Application comes with example configuration file (`imagebroker.json`) providing
   * gamma
   * image format conversion
 * automatic control of exposure time and white balance
-* image export to the client code
+* image export to the user code
 
 Additionally example code renders images on the screen using [OpenCV](https://opencv.org/) library, which should be installed in the system (minimal required version is 4.5.2).
