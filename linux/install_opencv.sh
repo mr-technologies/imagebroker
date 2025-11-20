@@ -9,7 +9,7 @@ then
 fi
 
 # Adjust as needed
-OPENCV_VERSION="4.10.0"
+OPENCV_VERSION="4.x"
 if [ $JETSON ]
 then
 	kern_ver="$(uname -r)"
@@ -18,7 +18,11 @@ then
 	kern_minor="${kern_minor%%.*}"
 	if [ "$kern_major" -ge 5 ]
 	then
-		if [ "$kern_minor" -ge 15 -o "$kern_major" -gt 5 ]
+		if [ "$kern_major" -gt 5 ]
+		then
+			CUDA_VERSION="13"
+			JETSON_THOR=1
+		elif [ "$kern_minor" -ge 15 ]
 		then
 			CUDA_VERSION="12"
 		else
@@ -90,7 +94,10 @@ CONFIG="-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-${OPENCV_VERSION}/modules 
 	-DWITH_OPENGL=ON \
 	-DWITH_CUDA=ON \
 	-DCUDA_FAST_MATH=ON"
-if [ $JETSON_NEW ]
+if [ $JETSON_THOR ]
+then
+	CONFIG+=" -DCUDA_ARCH_BIN=8.7,11.0    -DCUDA_ARCH_PTX=11.0"
+elif [ $JETSON_NEW ]
 then
 	CONFIG+=" -DCUDA_ARCH_BIN=7.2,8.7     -DCUDA_ARCH_PTX=8.7"
 elif [ $JETSON_OLD ]
