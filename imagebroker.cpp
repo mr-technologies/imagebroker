@@ -1,7 +1,7 @@
 /*
  * IFF SDK samples (https://mr-te.ch/iff-sdk) are licensed under MIT License.
  *
- * Copyright (c) 2022-2025 MRTech SK, s.r.o.
+ * Copyright (c) 2022-2026 MRTech SK, s.r.o.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
