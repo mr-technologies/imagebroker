@@ -1,6 +1,6 @@
 # Adjust the following settings as needed
 $VS_INSTALL_PATH="${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools"
-$OPENCV_VERSION="4.10.0"
+$OPENCV_VERSION="4.13.0"
 $WITH_CUDA="ON"
 
 $ErrorActionPreference="Stop"
