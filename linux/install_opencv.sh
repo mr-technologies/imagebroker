@@ -34,7 +34,7 @@ then
 		JETSON_OLD=1
 	fi
 else
-	CUDA_VERSION="12-6"
+	CUDA_VERSION="12-9"
 fi
 
 mkdir opencv
