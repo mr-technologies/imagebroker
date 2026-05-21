@@ -25,13 +25,13 @@ then
 		elif [ "$kern_minor" -ge 15 ]
 		then
 			CUDA_VERSION="12"
+			JETSON_ORIN=1
 		else
 			CUDA_VERSION="11-4"
 		fi
-		JETSON_NEW=1
 	else
-		CUDA_VERSION="10-2"
-		JETSON_OLD=1
+		echo "Unsupported Jetson Linux version!"
+		exit 1
 	fi
 else
 	CUDA_VERSION="12-9"
@@ -57,10 +57,6 @@ sudo apt install -y \
 	pkg-config \
 	python3-numpy \
 	unzip
-if [ $JETSON_OLD ]
-then
-	sudo mkdir -p /usr/lib/aarch64-linux-gnu/gtkglext-1.0/include
-fi
 if [ $JETSON ]
 then
 	sudo apt install -y cuda-toolkit-${CUDA_VERSION}
@@ -96,13 +92,13 @@ CONFIG="-DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-${OPENCV_VERSION}/modules 
 	-DCUDA_FAST_MATH=ON"
 if [ $JETSON_THOR ]
 then
-	CONFIG+=" -DCUDA_ARCH_BIN=8.7,11.0    -DCUDA_ARCH_PTX=11.0"
-elif [ $JETSON_NEW ]
+	CONFIG+=" -DCUDA_ARCH_BIN=8.7,11.0 -DCUDA_ARCH_PTX=11.0"
+elif [ $JETSON_ORIN ]
 then
-	CONFIG+=" -DCUDA_ARCH_BIN=7.2,8.7     -DCUDA_ARCH_PTX=8.7"
-elif [ $JETSON_OLD ]
+	CONFIG+=" -DCUDA_ARCH_BIN=8.7      -DCUDA_ARCH_PTX=8.7"
+elif [ $JETSON ]
 then
-	CONFIG+=" -DCUDA_ARCH_BIN=5.3,6.2,7.2 -DCUDA_ARCH_PTX=7.2"
+	CONFIG+=" -DCUDA_ARCH_BIN=7.2,8.7  -DCUDA_ARCH_PTX=8.7"
 fi
 cmake $CONFIG ../opencv-${OPENCV_VERSION}
 echo "Configuration done."
