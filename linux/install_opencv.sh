@@ -9,7 +9,7 @@ then
 fi
 
 # Adjust as needed
-OPENCV_VERSION="4.13.0"
+OPENCV_VERSION="4.14.0"
 if [ $JETSON ]
 then
 	kern_ver="$(uname -r)"
